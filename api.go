@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bufio"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -494,6 +495,18 @@ func (a *API) IPsecGet() (Response, error) {
 func (a *API) GetServerCipher(str string) (Response, error) {
 	return a.Conn.CallMethod("GetServerCipher", Request{"String": {str}})
 }
-func (a *API) GetServerCert() (Response, error) {
-	return a.Conn.CallMethod("GetServerCert", nil)
+func (a *API) GetServerCert() (string, error) {
+	if out, err := a.Conn.CallMethod("GetServerCert", nil); err != nil {
+		return "", err
+	} else {
+		var convert = func(input interface{}) []byte {
+			if str, ok := input.(string); ok {
+				return []byte(str)
+			} else {
+				return []byte("")
+			}
+		}
+		cert := base64.StdEncoding.EncodeToString(convert(out["Cert"]))
+		return cert, nil
+	}
 }

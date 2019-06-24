@@ -1,7 +1,6 @@
 package softetherApi
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"testing"
@@ -90,18 +89,7 @@ func TestAPI_GetServerCert(t *testing.T) {
 		log.Printf("GetServerCert Error: %v\n", err)
 		t.FailNow()
 	} else {
-		var convert = func(input interface{}) []byte {
-			if str, ok := input.(string); ok {
-				return []byte(str)
-			} else {
-				return []byte("")
-			}
-		}
-		cert := base64.StdEncoding.EncodeToString(convert(out["Cert"]))
-		fmt.Printf("GetServerCipher Cert:%s\n", cert)
-		key := base64.StdEncoding.EncodeToString(convert(out["Key"]))
-		fmt.Printf("GetServerCipher Key:%s\n", key)
-		fmt.Printf("GetServerCipher Flag:%d\n", out["Flag1"])
+		log.Println(out)
 	}
 }
 func TestAPI_GetOpenVpnSSTPConfig(t *testing.T) {
