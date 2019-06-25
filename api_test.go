@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	a = NewAPI("localhost", 443, "vpn1")
+	a = NewAPI("47.111.114.109", 443, "vpn1")
 	a.HandShake()
 }
 
@@ -44,11 +44,12 @@ func TestAPI_ListUser(t *testing.T) {
 	}
 }
 func TestAPI_GetUser(t *testing.T) {
-	if out, err := a.GetUser("VPN", "zhangsen"); err != nil {
+	if out, err := a.GetUser("golang", "golang"); err != nil {
 		log.Printf("GetUser Error: %v\n", err)
 		t.FailNow()
 	} else {
 		fmt.Printf("GetUser :%v\n", out)
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
 	}
 }
 
@@ -66,6 +67,8 @@ func TestAPI_GetHub(t *testing.T) {
 		t.FailNow()
 	} else {
 		fmt.Printf("GetHub :%v\n", out)
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
+
 	}
 }
 func TestAPI_GetHubStatus(t *testing.T) {
@@ -157,7 +160,7 @@ func TestAPI_GetHubAdminOptions(t *testing.T) {
 	}
 }
 func TestAPI_CreateUser(t *testing.T) {
-	if out, err := a.CreateUser("VPN", "zhangsen3", "VPN", AUTHTYPE_ANONYMOUS); err != nil {
+	if out, err := a.CreateUser("VPN", "zhangsen3", "VPN"); err != nil {
 		log.Printf("CreateUser Error: %v", err)
 		t.FailNow()
 	} else {
@@ -192,7 +195,7 @@ func TestAPI_Create(t *testing.T) {
 	}
 	//defer a.DeleteGroup("golang", "golang")
 	//
-	if out, err := a.CreateUser("golang", "golang", "golang", AUTHTYPE_PASSWORD); err != nil {
+	if out, err := a.CreateUser("golang", "golang", "golang"); err != nil {
 		if e, ok := err.(*apierror); ok && e.Code() != ERR_USER_ALREADY_EXISTS {
 			log.Printf("CreateUser Error: %v\n", err)
 			t.FailNow()
@@ -204,11 +207,11 @@ func TestAPI_Create(t *testing.T) {
 
 	//defer a.DeleteUser("golang", "golang")
 	//
-	if out, err := a.SetUser("golang", "golang"); err != nil {
-		log.Printf("SetUser Error: %v\n", err)
+	if out, err := a.SetUserPassword("golang", "golang", "golang22"); err != nil {
+		log.Printf("SetUserPassword Error: %v\n", err)
 		t.FailNow()
 	} else {
-		log.Printf("SetUser : %v\n", out)
+		log.Printf("SetUserPassword : %v\n", out)
 	}
 }
 func TestAPI_ListDhcp(t *testing.T) {

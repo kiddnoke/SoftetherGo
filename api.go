@@ -359,12 +359,10 @@ func (a *API) CreateGroup(hub, name, realname, note string) (Response, error) {
 		"Note":     {note},
 	})
 }
-func (a *API) SetGroup(hub, name, realname, note string) (Response, error) {
+func (a *API) SetGroup(hub, name string) (Response, error) {
 	return a.Conn.CallMethod("SetGroup", Request{
-		"HubName":  {hub},
-		"Name":     {name},
-		"RealName": {realname},
-		"Note":     {note},
+		"HubName": {hub},
+		"Name":    {name},
 	})
 }
 func (a *API) GetGroup(hub, name string) (Response, error) {
@@ -378,22 +376,27 @@ func (a *API) ListGroup(hub string) (Response, error) {
 }
 
 // User Operation
-func (a *API) CreateUser(hub, useranme, groupname string, authtype int) (Response, error) {
-	if authtype > AUTHTYPE_PASSWORD {
-		return nil, RpcError(ERR_AUTHTYPE_NOT_SUPPORTED)
-	}
+func (a *API) CreateUser(hub, useranme, password string) (Response, error) {
+	hashKey := hashPassword(useranme, password)
+	ntHashKey := genNtPasswordHash(password)
 	payload := Request{
-		"HubName":   {hub},
-		"Name":      {useranme},
-		"GroupName": {groupname},
-		"AuthType":  {authtype},
+		"HubName":        {hub},
+		"Name":           {useranme},
+		"AuthType":       {AUTHTYPE_PASSWORD},
+		"HashedKey":      {hashKey},
+		"NtLmSecureHash": {ntHashKey},
 	}
 	return a.Conn.CallMethod("CreateUser", payload)
 }
-func (a *API) SetUser(hub, useranme string) (Response, error) {
+func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) {
+	hashKey := hashPassword(useranme, password)
+	ntHashKey := genNtPasswordHash(password)
 	payload := Request{
-		"HubName": {hub},
-		"Name":    {useranme},
+		"HubName":        {hub},
+		"Name":           {useranme},
+		"AuthType":       {AUTHTYPE_PASSWORD},
+		"HashedKey":      {hashKey},
+		"NtLmSecureHash": {ntHashKey},
 	}
 	return a.Conn.CallMethod("SetUser", payload)
 }
@@ -405,6 +408,15 @@ func (a *API) GetUser(hub, name string) (Response, error) {
 }
 func (a *API) ListUser(hub string) (Response, error) {
 	return a.Conn.CallMethod("EnumUser", Request{"HubName": {hub}})
+}
+func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Response, error) {
+	payload := Request{
+		"HubName":            {hub},
+		"Name":               {name},
+		"policy:MaxUpload":   {MaxUpload},
+		"policy:MaxDownload": {MaxDownload},
+	}
+	return a.Conn.CallMethod("SetUserPolicy", payload)
 }
 
 // SecureNat Operation
