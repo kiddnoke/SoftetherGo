@@ -117,11 +117,19 @@ func TestAPI_GetSecureNatStatus(t *testing.T) {
 	}
 }
 func TestAPI_GetSecureNatOption(t *testing.T) {
-	if out, err := a.GetSecureNatOption("vpn1"); err != nil {
+	if out, err := a.GetSecureNatOption("vpn2"); err != nil {
 		log.Printf("GetSecureNatOption Error: %v\n", err)
 		t.FailNow()
 	} else {
 		log.Printf("GetSecureNatOption %v\n", out)
+	}
+}
+func TestAPI_SetSecureNatOption(t *testing.T) {
+	if out, err := a.SetSecureNatOption("vpn2", map[string]interface{}{}); err != nil {
+		log.Printf("SetSecureNatOption Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("SetSecureNatOption %v\n", out)
 	}
 }
 func TestAPI_SetServerPassword(t *testing.T) {
@@ -201,5 +209,14 @@ func TestAPI_Create(t *testing.T) {
 		t.FailNow()
 	} else {
 		log.Printf("SetUser : %v\n", out)
+	}
+}
+func TestAPI_ListDhcp(t *testing.T) {
+	//
+	if out, err := a.ListDhcp("golang"); err != nil {
+		log.Printf("ListDhcp Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("ListDhcp : %v\n", out)
 	}
 }

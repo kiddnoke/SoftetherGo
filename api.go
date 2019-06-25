@@ -417,8 +417,19 @@ func (a *API) DisableSecureNat(name string) (Response, error) {
 func (a *API) GetSecureNatStatus(name string) (Response, error) {
 	return a.Conn.CallMethod("GetSecureNATStatus", Request{"HubName": {name}})
 }
-func (a *API) GetSecureNatOption(name string) (Response, error) {
-	return a.Conn.CallMethod("GetSecureNATOption", Request{"HubName": {name}})
+func (a *API) GetSecureNatOption(hubname string) (Response, error) {
+	return a.Conn.CallMethod("GetSecureNATOption", Request{"RpcHubName": {hubname}})
+}
+
+func (a *API) SetSecureNatOption(hubname string, natoptions map[string]interface{}) (Response, error) {
+	/*
+		Ip 网卡的ip地址
+		DhcpLeaseIPStart  dhcp分配ip开始
+		DhcpLeaseIPEnd    dhcp分配ip结束
+		DhcpGatewayAddress dhcp默认网关地址
+		DhcpDnsServerAddress dhcp的dns服务器地址
+	*/
+	return a.Conn.CallMethod("SetSecureNATOption", Request{})
 }
 
 // OpenVPN Operation
@@ -509,4 +520,9 @@ func (a *API) GetServerCert() (string, error) {
 		cert := base64.StdEncoding.EncodeToString(convert(out["Cert"]))
 		return cert, nil
 	}
+}
+
+// DHCP Operation
+func (a *API) ListDhcp(hubname string) (Response, error) {
+	return a.Conn.CallMethod("EnumDHCP", Request{"HubName": {hubname}})
 }
