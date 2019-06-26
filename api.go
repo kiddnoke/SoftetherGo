@@ -301,16 +301,14 @@ func (a *API) GetConfig() (Response, error) {
 }
 
 // Hub Operation
-func (a *API) CreateHub(name string, hashed_password, secure_passwrod []byte, online bool, hub_type int) (Response, error) {
+func (a *API) CreateHub(name string, online bool, hub_type int) (Response, error) {
 	if hub_type > HUB_TYPE_FARM_DYNAMIC {
 		msg := fmt.Sprintf("hub_type[%d] is unspourts", hub_type)
 		return nil, errors.New(msg)
 	}
 
 	req := Request{
-		"HubName":        {name},
-		"HashedPassword": {hashed_password},
-		"SecurePassword": {secure_passwrod},
+		"HubName": {name},
 		"Online": {func(b bool) int {
 			if b {
 				return 1
