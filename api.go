@@ -331,13 +331,11 @@ func (a *API) DeleteHub(name string) (Response, error) {
 func (a *API) GetHub(name string) (Response, error) {
 	return a.Conn.CallMethod("GetHub", Request{"HubName": {name}})
 }
-func (a *API) SetHub(name string, hashed_password, secure_passwrod []byte, online bool, hub_type int) (Response, error) {
+func (a *API) SetHub(name string, online bool, hub_type int) (Response, error) {
 	return a.Conn.CallMethod("SetHub", Request{
-		"HubName":        {name},
-		"HashedPassword": {hashed_password},
-		"SecurePassword": {secure_passwrod},
-		"Online":         {online},
-		"HubType":        {hub_type},
+		"HubName": {name},
+		"Online":  {online},
+		"HubType": {hub_type},
 	})
 }
 func (a *API) GetHubStatus(name string) (Response, error) {
@@ -502,7 +500,7 @@ func (a *API) GetOpenVpnRemoteAccess() (string, error) {
 	}
 	remoteaccess, err := getRemoteAccess(res["Buffer"].(string))
 	if err == nil {
-		return strings.Replace(remoteaccess, "proto udp", "proto tcp", -1), nil
+		return strings.Replace(remoteaccess, "proto udp\n", "proto tcp\n", -1), nil
 	} else {
 		return "", nil
 	}
@@ -539,4 +537,21 @@ func (a *API) GetServerCert() (string, error) {
 // DHCP Operation
 func (a *API) ListDhcp(hubname string) (Response, error) {
 	return a.Conn.CallMethod("EnumDHCP", Request{"HubName": {hubname}})
+}
+
+// DynamicDnsOperation
+func (a *API) GetDDnsInternetSettng(hubname string) (Response, error) {
+	return a.Conn.CallMethod("GetDDnsInternetSettng", Request{})
+}
+func (a *API) GetDDnsClientStatus() (Response, error) {
+	return a.Conn.CallMethod("GetDDnsClientStatus", Request{})
+}
+func (a *API) GetDDnsHostName() (string, string, error) {
+	out, err := a.GetDDnsClientStatus()
+	if err != nil {
+		return "", "", err
+	}
+	DDnsHostName := out["CurrentFqdn"].(string)
+	Ipv4 := out["CurrentIPv4"].(string)
+	return DDnsHostName, Ipv4, nil
 }

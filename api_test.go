@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var a *API
+
 func init() {
 	a = NewAPI("47.111.114.109", 443, "vpn1")
 	a.HandShake()
@@ -32,7 +34,7 @@ func TestAPI_GetOpenVpnRemoteAccess(t *testing.T) {
 		log.Printf("TestAPI_GetOpenVpnRemoteAccess Error: %v\n", err)
 		t.FailNow()
 	} else {
-		log.Printf("TestAPI_GetOpenVpnRemoteAccess out[%v]", out)
+		log.Printf("TestAPI_GetOpenVpnRemoteAccess\n%v", out)
 	}
 }
 func TestAPI_ListUser(t *testing.T) {
@@ -44,12 +46,16 @@ func TestAPI_ListUser(t *testing.T) {
 	}
 }
 func TestAPI_GetUser(t *testing.T) {
-	if out, err := a.GetUser("golang", "golang"); err != nil {
+	if out, err := a.GetUser("VPN", "vpn"); err != nil {
 		log.Printf("GetUser Error: %v\n", err)
 		t.FailNow()
 	} else {
 		fmt.Printf("GetUser :%v\n", out)
+		log.Printf("CreatedTime[%v] UpdatedTime[%v]\n", out["CreatedTime"].(int64), out["UpdatedTime"].(int64))
+		log.Printf("MaxUpload[%d] MaxDownload[%d]\n", out["policy:MaxUpload"].(int), out["policy:MaxDownload"].(int))
 		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
+		log.Printf("Recv.BroadcastBytes:%d Recv.UnicastBytes:%d ", out["Recv.BroadcastBytes"].(int64), out["Recv.UnicastBytes"].(int64))
+		log.Printf("Send.BroadcastBytes:%d Send.UnicastBytes:%d ", out["Send.BroadcastBytes"].(int64), out["Send.UnicastBytes"].(int64))
 	}
 }
 
@@ -185,16 +191,6 @@ func TestAPI_Create(t *testing.T) {
 		log.Println("EnableSecureNat :", out)
 	}
 	//
-	if out, err := a.CreateGroup("golang", "golang", "", ""); err != nil {
-		if e, ok := err.(*apierror); ok && e.Code() != ERR_GROUP_ALREADY_EXISTS {
-			log.Printf("CreateGroup Error: %v\n", err)
-			t.FailNow()
-		}
-	} else {
-		log.Printf("CreateGroup %v\n", out)
-	}
-	//defer a.DeleteGroup("golang", "golang")
-	//
 	if out, err := a.CreateUser("golang", "golang", "golang"); err != nil {
 		if e, ok := err.(*apierror); ok && e.Code() != ERR_USER_ALREADY_EXISTS {
 			log.Printf("CreateUser Error: %v\n", err)
@@ -235,5 +231,29 @@ func TestAPI_SetUserPolicy(t *testing.T) {
 		t.FailNow()
 	} else {
 		log.Printf("GetUser %v", out)
+	}
+}
+func TestAPI_GetDDnsInternetSettng(t *testing.T) {
+	if out, err := a.GetDDnsInternetSettng("VPN"); err != nil {
+		log.Printf("GetDDnsInternetSettng Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("GetDDnsInternetSettng %v", out)
+	}
+}
+func TestAPI_GetDDnsClientStatus(t *testing.T) {
+	if out, err := a.GetDDnsClientStatus(); err != nil {
+		log.Printf("GetDDnsClientStatus Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("GetDDnsClientStatus %v", out)
+	}
+}
+func TestAPI_GetDDnsHostName(t *testing.T) {
+	if host, address, err := a.GetDDnsHostName(); err != nil {
+		log.Printf("GetDDnsHostName Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("GetDDnsHostName[%s] Address[%s]", host, address)
 	}
 }

@@ -15,12 +15,3 @@ func Test_genNtPasswordHash(t *testing.T) {
 	hashed := genNtPasswordHash("golang")
 	log.Printf("NtLmSecureHash[% x]", hashed)
 }
-func Test_GetSystemTime(t *testing.T) {
-	// 2407043614
-	// 1561513927
-	// 1561516968166280200
-	// 1561497185748
-	// 1561497286586
-	i := 2407043614
-	log.Println(NtoL(int64(i)))
-}
