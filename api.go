@@ -413,10 +413,12 @@ func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Respo
 	payload := Request{
 		"HubName":            {hub},
 		"Name":               {name},
+		"UsePolicy":          {1},
+		"policy:Access":      {1},
 		"policy:MaxUpload":   {MaxUpload},
 		"policy:MaxDownload": {MaxDownload},
 	}
-	return a.Conn.CallMethod("SetUserPolicy", payload)
+	return a.Conn.CallMethod("SetUser", payload)
 }
 
 // SecureNat Operation

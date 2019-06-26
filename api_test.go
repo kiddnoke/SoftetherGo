@@ -223,3 +223,17 @@ func TestAPI_ListDhcp(t *testing.T) {
 		log.Printf("ListDhcp : %v\n", out)
 	}
 }
+func TestAPI_SetUserPolicy(t *testing.T) {
+	if out, err := a.SetUserPolicy("VPN", "vpn", 3000000, 4000000); err != nil {
+		log.Printf("SetUserPolicy Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("SetUserPolicy %v", out)
+	}
+	if out, err := a.GetUser("VPN", "vpn"); err != nil {
+		log.Printf("GetUser Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("GetUser %v", out)
+	}
+}

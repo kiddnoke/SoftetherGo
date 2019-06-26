@@ -21,14 +21,15 @@ func (p *protocol) GetRaw(size int) []byte {
 	p.Offset += size
 	return raw
 }
-func (p *protocol) GetIntImpl(size int) uint32 {
-	var i uint32
+func (p *protocol) GetIntImpl(size int) uint64 {
+	var i uint64
 	raw := p.GetRaw(size)
 	if size == 4 {
-		i = binary.BigEndian.Uint32(raw)
+		i32 := binary.BigEndian.Uint32(raw)
+		i = uint64(i32)
 	} else {
 		i64 := binary.BigEndian.Uint64(raw)
-		i = uint32(i64)
+		i = i64
 	}
 	return i
 }
