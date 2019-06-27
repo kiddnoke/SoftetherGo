@@ -58,7 +58,12 @@ func (p *protocol) Deserialize() (output map[string]interface{}, err error) {
 			getter = func(index int) interface{} {
 				return p.GetInt()
 			}
-		} else if 1 <= key_type && key_type <= 3 {
+		} else if 1 == key_type {
+			getter = func(index int) interface{} {
+				ret := p.GetString(0)
+				return []byte(ret)
+			}
+		} else if 2 <= key_type && key_type <= 3 {
 			getter = func(index int) interface{} {
 				return p.GetString(0)
 			}
@@ -90,7 +95,7 @@ func (p *protocol) SetIntImpl(value interface{}, size int) {
 		p.SetRaw(value_pack)
 	} else {
 		value_pack := make([]byte, 8)
-		binary.BigEndian.PutUint64(value_pack, uint64(value.(int)))
+		binary.BigEndian.PutUint64(value_pack, uint64(value.(int64)))
 		p.SetRaw(value_pack)
 	}
 }

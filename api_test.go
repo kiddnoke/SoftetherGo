@@ -73,7 +73,7 @@ func TestAPI_GetHub(t *testing.T) {
 		t.FailNow()
 	} else {
 		fmt.Printf("GetHub :%v\n", out)
-		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
 
 	}
 }
@@ -198,17 +198,15 @@ func TestAPI_Create(t *testing.T) {
 		}
 	} else {
 		log.Printf("CreateUser %v\n", out)
-		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
 	}
 
-	//defer a.DeleteUser("golang", "golang")
-	//
-	//if out, err := a.SetUserPassword("golang", "golang", "golang22"); err != nil {
-	//	log.Printf("SetUserPassword Error: %v\n", err)
-	//	t.FailNow()
-	//} else {
-	//	log.Printf("SetUserPassword : %v\n", out)
-	//}
+	if out, err := a.SetUserPolicy("golang", "golang", 200*1024*8, 200*1024*8); err != nil {
+		log.Printf("SetUserPolicy Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
+	}
 }
 func TestAPI_ListDhcp(t *testing.T) {
 	//

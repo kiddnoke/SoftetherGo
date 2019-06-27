@@ -220,7 +220,7 @@ func (a *API) Connect() (err error) {
 	return err
 }
 func (a *API) Authenticate(hub string) (err error) {
-	random_from_svr := a.ConnectResponse["random"].(interface{}).(string)
+	random_from_svr := a.ConnectResponse["random"].(interface{}).([]byte)
 	auth_payload := make(map[string][]interface{})
 	auth_payload["method"] = append(auth_payload["method"], "admin")
 	if hub != "" {
@@ -332,7 +332,13 @@ func (a *API) GetHub(name string) (Response, error) {
 func (a *API) SetHub(name string, online bool, hub_type int) (Response, error) {
 	return a.Conn.CallMethod("SetHub", Request{
 		"HubName": {name},
-		"Online":  {online},
+		"Online": {func(b bool) int {
+			if b {
+				return 1
+			} else {
+				return 0
+			}
+		}(online)},
 		"HubType": {hub_type},
 	})
 }
@@ -406,14 +412,20 @@ func (a *API) ListUser(hub string) (Response, error) {
 	return a.Conn.CallMethod("EnumUser", Request{"HubName": {hub}})
 }
 func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Response, error) {
-	payload := Request{
-		"HubName":            {hub},
-		"Name":               {name},
-		"UsePolicy":          {1},
-		"policy:Access":      {1},
-		"policy:MaxUpload":   {MaxUpload},
-		"policy:MaxDownload": {MaxDownload},
+	preUserInfo, err := a.GetUser(hub, name)
+	if err != nil {
+		return nil, err
 	}
+
+	payload := Request{}
+	for key, value := range preUserInfo {
+		payload[key] = append(payload[key], value)
+	}
+
+	payload["UsePolicy"] = append(payload["UsePolicy"], 1)
+	payload["policy:Access"] = append(payload["policy:Access"], 1)
+	payload["policy:MaxUpload"] = append(payload["policy:MaxUpload"], MaxUpload)
+	payload["policy:MaxDownload"] = append(payload["policy:MaxDownload"], MaxDownload)
 	return a.Conn.CallMethod("SetUser", payload)
 }
 
