@@ -304,20 +304,20 @@ var ErrorNo = _ErrorNo{
 }
 
 func RpcError(code int) error {
-	return &apierror{
+	return &ApiError{
 		code:    code,
 		message: ErrorNo[code],
 	}
 }
 
-type apierror struct {
+type ApiError struct {
 	code    int
 	message string
 }
 
-func (e apierror) Error() string {
+func (e ApiError) Error() string {
 	return e.message
 }
-func (e apierror) Code() int {
+func (e ApiError) Code() int {
 	return e.code
 }

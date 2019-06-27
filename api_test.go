@@ -175,8 +175,8 @@ func TestAPI_CreateUser(t *testing.T) {
 }
 func TestAPI_Create(t *testing.T) {
 	//
-	if out, err := a.CreateHub("golang", []byte(nil), []byte(nil), true, HUB_TYPE_STANDALONE); err != nil {
-		if e, ok := err.(*apierror); ok && e.Code() != ERR_HUB_ALREADY_EXISTS {
+	if out, err := a.CreateHub("golang", true, HUB_TYPE_STANDALONE); err != nil {
+		if e, ok := err.(*ApiError); ok && e.Code() != ERR_HUB_ALREADY_EXISTS {
 			log.Printf("CreateHub Error: %v\n", err)
 			t.FailNow()
 		}
@@ -192,7 +192,7 @@ func TestAPI_Create(t *testing.T) {
 	}
 	//
 	if out, err := a.CreateUser("golang", "golang", "golang"); err != nil {
-		if e, ok := err.(*apierror); ok && e.Code() != ERR_USER_ALREADY_EXISTS {
+		if e, ok := err.(*ApiError); ok && e.Code() != ERR_USER_ALREADY_EXISTS {
 			log.Printf("CreateUser Error: %v\n", err)
 			t.FailNow()
 		}
@@ -203,12 +203,12 @@ func TestAPI_Create(t *testing.T) {
 
 	//defer a.DeleteUser("golang", "golang")
 	//
-	if out, err := a.SetUserPassword("golang", "golang", "golang22"); err != nil {
-		log.Printf("SetUserPassword Error: %v\n", err)
-		t.FailNow()
-	} else {
-		log.Printf("SetUserPassword : %v\n", out)
-	}
+	//if out, err := a.SetUserPassword("golang", "golang", "golang22"); err != nil {
+	//	log.Printf("SetUserPassword Error: %v\n", err)
+	//	t.FailNow()
+	//} else {
+	//	log.Printf("SetUserPassword : %v\n", out)
+	//}
 }
 func TestAPI_ListDhcp(t *testing.T) {
 	//
