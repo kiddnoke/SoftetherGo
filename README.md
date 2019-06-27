@@ -12,8 +12,9 @@ Usage example
 
 api := NewAPI('vpn.whitehouse.gov', 443, '123456password')
 
-api.connect()
-api.authenticate()
-api.TestAPI_HandShake()
+api.HandShake()
 
+api.Test()
+
+api.Disconnect()
 ```
