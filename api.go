@@ -391,15 +391,22 @@ func (a *API) CreateUser(hub, useranme, password string) (Response, error) {
 	return a.Conn.CallMethod("CreateUser", payload)
 }
 func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) {
+	preUserInfo, err := a.GetUser(hub, useranme)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := Request{}
+	for key, value := range preUserInfo {
+		payload[key] = append(payload[key], value)
+	}
+
 	hashKey := hashPassword(useranme, password)
 	ntHashKey := genNtPasswordHash(password)
-	payload := Request{
-		"HubName":        {hub},
-		"Name":           {useranme},
-		"AuthType":       {AUTHTYPE_PASSWORD},
-		"HashedKey":      {hashKey},
-		"NtLmSecureHash": {ntHashKey},
-	}
+	payload["AuthType"] = append(payload["AuthType"], 1)
+	payload["HashedKey"] = append(payload["HashedKey"], hashKey)
+	payload["NtLmSecureHash"] = append(payload["NtmSecureHas"], ntHashKey)
+
 	return a.Conn.CallMethod("SetUser", payload)
 }
 func (a *API) DeleteUser(hub, name string) (Response, error) {

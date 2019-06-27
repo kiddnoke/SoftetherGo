@@ -9,7 +9,7 @@ import (
 var a *API
 
 func init() {
-	a = NewAPI("47.111.114.109", 443, "vpn1")
+	a = NewAPI("47.111.114.109", 443, "1")
 	a.HandShake()
 }
 
@@ -53,7 +53,7 @@ func TestAPI_GetUser(t *testing.T) {
 		fmt.Printf("GetUser :%v\n", out)
 		log.Printf("CreatedTime[%v] UpdatedTime[%v]\n", out["CreatedTime"].(int64), out["UpdatedTime"].(int64))
 		log.Printf("MaxUpload[%d] MaxDownload[%d]\n", out["policy:MaxUpload"].(int), out["policy:MaxDownload"].(int))
-		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].(string)), []byte(out["NtLmSecureHash"].(string)))
+		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
 		log.Printf("Recv.BroadcastBytes:%d Recv.UnicastBytes:%d ", out["Recv.BroadcastBytes"].(int64), out["Recv.UnicastBytes"].(int64))
 		log.Printf("Send.BroadcastBytes:%d Send.UnicastBytes:%d ", out["Send.BroadcastBytes"].(int64), out["Send.UnicastBytes"].(int64))
 	}
