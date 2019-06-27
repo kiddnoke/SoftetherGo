@@ -38,7 +38,7 @@ func TestAPI_GetOpenVpnRemoteAccess(t *testing.T) {
 	}
 }
 func TestAPI_ListUser(t *testing.T) {
-	if out, err := a.ListUser("VPN"); err != nil {
+	if out, err := a.ListUser("golang"); err != nil {
 		log.Printf("ListUser Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -232,7 +232,7 @@ func TestAPI_SetUserPolicy(t *testing.T) {
 	}
 }
 func TestAPI_GetDDnsInternetSettng(t *testing.T) {
-	if out, err := a.GetDDnsInternetSettng("VPN"); err != nil {
+	if out, err := a.GetDDnsInternetSettng(); err != nil {
 		log.Printf("GetDDnsInternetSettng Error: %v\n", err)
 		t.FailNow()
 	} else {
