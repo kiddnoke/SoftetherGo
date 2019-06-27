@@ -19,6 +19,21 @@ import (
 type Response map[string]interface{}
 type Request map[string][]interface{}
 
+var booltoint8 = func(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
+}
+var intToString = func(input []int) []interface{} {
+	var output []interface{}
+	for _, i := range input {
+		output = append(output, strconv.Itoa(i))
+	}
+	return output
+}
+
 func keepalive(conn net.Conn) {
 	c, ok := conn.(*net.TCPConn)
 	if !ok {
@@ -463,20 +478,7 @@ func (a *API) SetSecureNatOption(hubname string, natoptions map[string]interface
 
 // OpenVPN Operation
 func (a *API) SetOpenVpnSSTPConfig(enable_open_vpn, enable_sstp bool, open_vpn_port_list []int) (Response, error) {
-	var booltoint8 = func(b bool) int {
-		if b {
-			return 1
-		} else {
-			return 0
-		}
-	}
-	var intToString = func(input []int) []interface{} {
-		var output []interface{}
-		for _, i := range input {
-			output = append(output, strconv.Itoa(i))
-		}
-		return output
-	}
+
 	req := Request{
 		"EnableOpenVPN":   {booltoint8(enable_open_vpn)},
 		"EnableSSTP":      {booltoint8(enable_sstp)},
@@ -495,8 +497,8 @@ func (a *API) GetOpenVpnRemoteAccess() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var getRemoteAccess = func(stream string) (string, error) {
-		zip_buffer := res["Buffer"].(string)
+	var getRemoteAccess = func(stream []byte) (string, error) {
+		zip_buffer := string(stream)
 		zip_reader, err := zip.NewReader(strings.NewReader(zip_buffer), int64(len(zip_buffer)))
 		if err != nil {
 			return "", err
@@ -515,7 +517,7 @@ func (a *API) GetOpenVpnRemoteAccess() (string, error) {
 			return "", errors.New("there are not remote_access file")
 		}
 	}
-	remoteaccess, err := getRemoteAccess(res["Buffer"].(string))
+	remoteaccess, err := getRemoteAccess(res["Buffer"].([]byte))
 	if err == nil {
 		return strings.Replace(remoteaccess, "proto udp\n", "proto tcp\n", -1), nil
 	} else {
@@ -530,6 +532,15 @@ func (a *API) IPsecEnable() (Response, error) {
 func (a *API) IPsecGet() (Response, error) {
 	return a.Conn.CallMethod("GetIPsecServices", Request{})
 }
+func (a *API) IPsecSet(l2tp, l2tpraw, ehterip bool, psk string, hub string) (Response, error) {
+	return a.Conn.CallMethod("SetIPsecServices", Request{
+		"L2TP_IPsec":      {booltoint8(l2tp)},
+		"L2TP_Raw":        {booltoint8(l2tpraw)},
+		"EtherIP_IPsec":   {booltoint8(ehterip)},
+		"IPsec_Secret":    {psk},
+		"L2TP_DefaultHub": {hub},
+	})
+}
 
 // Cert Operation
 func (a *API) GetServerCipher(str string) (Response, error) {
@@ -542,6 +553,8 @@ func (a *API) GetServerCert() (string, error) {
 		var convert = func(input interface{}) []byte {
 			if str, ok := input.(string); ok {
 				return []byte(str)
+			} else if buff, ok := input.([]byte); ok {
+				return buff
 			} else {
 				return []byte("")
 			}
