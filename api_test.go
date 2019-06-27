@@ -1,15 +1,15 @@
 package softetherApi
 
 import (
-	"fmt"
 	"log"
 	"testing"
+	"time"
 )
 
 var a *API
 
 func init() {
-	a = NewAPI("47.111.114.109", 443, "1")
+	a = NewAPI("47.111.114.109", 443, "47.74.188.243:7001")
 	a.HandShake()
 }
 
@@ -18,7 +18,7 @@ func TestAPI_GetServerInfo(t *testing.T) {
 		log.Printf("GetServerInfo Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("GetServerInfo :%v\n", out)
+		log.Printf("GetServerInfo :%v\n", out)
 	}
 }
 func TestAPI_MakeOpenVpnConfigFile(t *testing.T) {
@@ -38,19 +38,19 @@ func TestAPI_GetOpenVpnRemoteAccess(t *testing.T) {
 	}
 }
 func TestAPI_ListUser(t *testing.T) {
-	if out, err := a.ListUser("golang"); err != nil {
+	if out, err := a.ListUser("100022"); err != nil {
 		log.Printf("ListUser Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("ListUser :%v\n", out)
+		log.Printf("ListUser :%v\n", out)
 	}
 }
 func TestAPI_GetUser(t *testing.T) {
-	if out, err := a.GetUser("VPN", "vpn"); err != nil {
+	if out, err := a.GetUser("DEFAULT", "default"); err != nil {
 		log.Printf("GetUser Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("GetUser :%v\n", out)
+		log.Printf("GetUser :%v\n", out)
 		log.Printf("CreatedTime[%v] UpdatedTime[%v]\n", out["CreatedTime"].(int64), out["UpdatedTime"].(int64))
 		log.Printf("MaxUpload[%d] MaxDownload[%d]\n", out["policy:MaxUpload"].(int), out["policy:MaxDownload"].(int))
 		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
@@ -64,33 +64,48 @@ func TestAPI_ListHub(t *testing.T) {
 		log.Printf("ListHub Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("ListHub :%v\n", out)
+		log.Printf("ListHub :%v", out)
+		log.Printf("LastCommTime :%v", out["LastCommTime"].([]interface{}))
+		hubs := out
+
+		i_lastCommTime := hubs["LastCommTime"].([]interface{})
+		i_hubName := hubs["HubName"].([]interface{})
+
+		for index, value := range i_lastCommTime {
+			lastcommtime := time.Unix(value.(int64)/1e3, value.(int64)%1e3*1e6)
+			log.Println(lastcommtime)
+			now := time.Now()
+			if now.Sub(lastcommtime) >= time.Second*30 {
+				clear_hubname := i_hubName[index].(string)
+				log.Println(clear_hubname)
+			}
+		}
 	}
 }
 func TestAPI_GetHub(t *testing.T) {
-	if out, err := a.GetHub("VPN"); err != nil {
+	if out, err := a.GetHub("DEFAULT"); err != nil {
 		log.Printf("GetHub Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("GetHub :%v\n", out)
-		log.Printf("HashedKey[% x] NtLmSecureHash[% x]\n", []byte(out["HashedKey"].([]byte)), []byte(out["NtLmSecureHash"].([]byte)))
+		log.Printf("GetHub :%v\n", out)
+		log.Printf("HashedPassword[% x] SecurePassword[% x]\n", []byte(out["HashedPassword"].([]byte)), []byte(out["SecurePassword"].([]byte)))
 
 	}
 }
 func TestAPI_GetHubStatus(t *testing.T) {
-	if out, err := a.GetHubStatus("VPN"); err != nil {
+	if out, err := a.GetHubStatus("DEFAULT"); err != nil {
 		log.Printf("GetHubStatus Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("GetHubStatus :%v\n", out)
+		log.Printf("GetHubStatus :%v\n", out)
 	}
 }
 func TestAPI_GetServerCipher(t *testing.T) {
-	if out, err := a.GetServerCipher(""); err != nil {
+	if out, err := a.GetServerCipher(); err != nil {
 		log.Printf("GetServerCipher Error: %v\n", err)
 		t.FailNow()
 	} else {
-		fmt.Printf("GetServerCipher Cipher:%v\n", out)
+		log.Printf("GetServerCipher Cipher:%v\n", out)
 	}
 }
 func TestAPI_GetServerCert(t *testing.T) {
@@ -118,7 +133,7 @@ func TestAPI_SetOpenVpnSSTPConfig(t *testing.T) {
 	}
 }
 func TestAPI_GetSecureNatStatus(t *testing.T) {
-	if out, err := a.GetSecureNatStatus("VPN"); err != nil {
+	if out, err := a.GetSecureNatStatus("DEFAULT"); err != nil {
 		log.Printf("GetSecureNatStatus Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -126,7 +141,7 @@ func TestAPI_GetSecureNatStatus(t *testing.T) {
 	}
 }
 func TestAPI_GetSecureNatOption(t *testing.T) {
-	if out, err := a.GetSecureNatOption("vpn2"); err != nil {
+	if out, err := a.GetSecureNatOption("DEFAULT"); err != nil {
 		log.Printf("GetSecureNatOption Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -134,7 +149,7 @@ func TestAPI_GetSecureNatOption(t *testing.T) {
 	}
 }
 func TestAPI_SetSecureNatOption(t *testing.T) {
-	if out, err := a.SetSecureNatOption("vpn2", map[string]interface{}{}); err != nil {
+	if out, err := a.SetSecureNatOption("DEFAULT", map[string]interface{}{}); err != nil {
 		log.Printf("SetSecureNatOption Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -154,11 +169,11 @@ func TestAPI_GetConfig(t *testing.T) {
 		log.Printf("GetConfig Error: %v\n", err)
 		t.FailNow()
 	} else {
-		log.Printf("GetConfig %v\n", out)
+		log.Printf("GetConfig %v\n", string(out["FileData"].([]byte)))
 	}
 }
 func TestAPI_GetHubAdminOptions(t *testing.T) {
-	if out, err := a.GetHubAdminOptions("VPN"); err != nil {
+	if out, err := a.GetHubAdminOptions("DEFAULT"); err != nil {
 		log.Printf("GetHubAdminOptions Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -253,5 +268,13 @@ func TestAPI_GetDDnsHostName(t *testing.T) {
 		t.FailNow()
 	} else {
 		log.Printf("GetDDnsHostName[%s] Address[%s]", host, address)
+	}
+}
+func TestAPI_ListListener(t *testing.T) {
+	if out, err := a.ListListener(); err != nil {
+		log.Printf("ListListener Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("ListListener %v \n", out)
 	}
 }

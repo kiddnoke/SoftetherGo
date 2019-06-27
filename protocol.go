@@ -81,7 +81,6 @@ func (p *protocol) Deserialize() (output map[string]interface{}, err error) {
 			}
 			output[key] = key_value
 		}
-
 	}
 	return
 }
@@ -131,8 +130,6 @@ func (p *protocol) SetUString(str string, offset int) {
 	p.SetRaw(value)
 }
 
-var typeOfBytes = reflect.TypeOf([]byte(nil))
-
 func (p *protocol) Serialize(input map[string][]interface{}) (payload []byte) {
 	p.PayLoad = []byte{}
 	p.SetInt(len(input))
@@ -143,18 +140,22 @@ func (p *protocol) Serialize(input map[string][]interface{}) (payload []byte) {
 		switch kind {
 		case reflect.Int:
 			value_type_int = 0
-		case reflect.Slice:
-			if value.Type() == typeOfBytes {
-				value_type_int = 1
-			} else if value.Type() == reflect.TypeOf([]string{}) {
-				value_type_int = 2
-			}
 		case reflect.String:
 			value_type_int = 2
 		case reflect.Int64:
 			value_type_int = 4
 		case reflect.Bool:
 			value_type_int = 0
+		case reflect.Slice:
+			if value.Type() == reflect.TypeOf([]bool(nil)) {
+				value_type_int = 0
+			} else if value.Type() == reflect.TypeOf([]byte(nil)) {
+				value_type_int = 1
+			} else if value.Type() == reflect.TypeOf([]string{}) {
+				value_type_int = 2
+			} else if value.Type() == reflect.TypeOf([]int64{}) {
+				value_type_int = 4
+			}
 		default:
 			value_type_int = 1
 		}

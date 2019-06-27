@@ -19,21 +19,6 @@ import (
 type Response map[string]interface{}
 type Request map[string][]interface{}
 
-var booltoint8 = func(b bool) int {
-	if b {
-		return 1
-	} else {
-		return 0
-	}
-}
-var intToString = func(input []int) []interface{} {
-	var output []interface{}
-	for _, i := range input {
-		output = append(output, strconv.Itoa(i))
-	}
-	return output
-}
-
 func keepalive(conn net.Conn) {
 	c, ok := conn.(*net.TCPConn)
 	if !ok {
@@ -543,8 +528,8 @@ func (a *API) IPsecSet(l2tp, l2tpraw, ehterip bool, psk string, hub string) (Res
 }
 
 // Cert Operation
-func (a *API) GetServerCipher(str string) (Response, error) {
-	return a.Conn.CallMethod("GetServerCipher", Request{"String": {str}})
+func (a *API) GetServerCipher() (Response, error) {
+	return a.Conn.CallMethod("GetServerCipher", Request{"String": {""}})
 }
 func (a *API) GetServerCert() (string, error) {
 	if out, err := a.Conn.CallMethod("GetServerCert", nil); err != nil {
@@ -584,4 +569,23 @@ func (a *API) GetDDnsHostName() (string, string, error) {
 	DDnsHostName := out["CurrentFqdn"].(string)
 	Ipv4 := out["CurrentIPv4"].(string)
 	return DDnsHostName, Ipv4, nil
+}
+
+// Listener Operation
+func (a *API) CreateListener(port int, enable bool) (Response, error) {
+	return a.Conn.CallMethod("CreateListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
+}
+func (a *API) ListListener() (map[int]bool, error) {
+	Ports := make(map[int]bool, 0)
+	_, err := a.Conn.CallMethod("EnumListener", Request{})
+	if err != nil {
+		return nil, err
+	}
+	return Ports, err
+}
+func (a *API) DeleteListener(port int) (Response, error) {
+	return a.Conn.CallMethod("DeleteListener", Request{"Port": {port}})
+}
+func (a *API) EnableListener(port int, enable bool) (Response, error) {
+	return a.Conn.CallMethod("EnableListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
 }
