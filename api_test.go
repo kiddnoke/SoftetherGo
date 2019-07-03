@@ -2,6 +2,7 @@ package softetherApi
 
 import (
 	"log"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -68,16 +69,26 @@ func TestAPI_ListHub(t *testing.T) {
 		log.Printf("LastCommTime :%v", out["LastCommTime"].([]interface{}))
 		hubs := out
 
-		i_lastCommTime := hubs["LastCommTime"].([]interface{})
-		i_hubName := hubs["HubName"].([]interface{})
+		if reflect.TypeOf(hubs["LastCommTime"]).Kind() == reflect.Slice {
+			i_lastCommTime := hubs["LastCommTime"].([]interface{})
+			i_hubName := hubs["HubName"].([]interface{})
 
-		for index, value := range i_lastCommTime {
-			lastcommtime := time.Unix(value.(int64)/1e3, value.(int64)%1e3*1e6)
-			log.Println(lastcommtime)
+			for index, value := range i_lastCommTime {
+				lastcommtime := time.Unix(value.(int64)/1e3, value.(int64)%1e3*1e6)
+				log.Println(lastcommtime)
+				now := time.Now()
+				if now.Sub(lastcommtime) >= time.Second*30 {
+					clear_hubname := i_hubName[index].(string)
+					log.Println(clear_hubname)
+				}
+			}
+		} else if reflect.TypeOf(hubs["LastCommTime"]).Kind() == reflect.Int64 {
+			log.Println(hubs["HubName"])
+			lastCommTime := hubs["LastCommTime"].(int64)
+			lastcommtime := time.Unix(lastCommTime/1e3, 0)
 			now := time.Now()
 			if now.Sub(lastcommtime) >= time.Second*30 {
-				clear_hubname := i_hubName[index].(string)
-				log.Println(clear_hubname)
+				log.Println(hubs["HubName"])
 			}
 		}
 	}
@@ -247,11 +258,11 @@ func TestAPI_SetUserPolicy(t *testing.T) {
 	}
 }
 func TestAPI_GetDDnsInternetSettng(t *testing.T) {
-	if out, err := a.GetDDnsInternetSettng(); err != nil {
-		log.Printf("GetDDnsInternetSettng Error: %v\n", err)
+	if out, err := a.GetDDnsInternetSetting(); err != nil {
+		log.Printf("GetDDnsInternetSetting Error: %v\n", err)
 		t.FailNow()
 	} else {
-		log.Printf("GetDDnsInternetSettng %v", out)
+		log.Printf("GetDDnsInternetSetting %v", out)
 	}
 }
 func TestAPI_GetDDnsClientStatus(t *testing.T) {

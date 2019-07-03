@@ -555,8 +555,8 @@ func (a *API) ListDhcp(hubname string) (Response, error) {
 }
 
 // DynamicDnsOperation
-func (a *API) GetDDnsInternetSettng() (Response, error) {
-	return a.Conn.CallMethod("GetDDnsInternetSettng", Request{})
+func (a *API) GetDDnsInternetSetting() (Response, error) {
+	return a.Conn.CallMethod("GetDDnsInternetSetting", Request{})
 }
 func (a *API) GetDDnsClientStatus() (Response, error) {
 	return a.Conn.CallMethod("GetDDnsClientStatus", Request{})
