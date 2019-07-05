@@ -449,7 +449,6 @@ func (a *API) GetSecureNatStatus(name string) (Response, error) {
 func (a *API) GetSecureNatOption(hubname string) (Response, error) {
 	return a.Conn.CallMethod("GetSecureNATOption", Request{"RpcHubName": {hubname}})
 }
-
 func (a *API) SetSecureNatOption(hubname string, natoptions map[string]interface{}) (Response, error) {
 	/*
 		Ip 网卡的ip地址
@@ -588,4 +587,26 @@ func (a *API) DeleteListener(port int) (Response, error) {
 }
 func (a *API) EnableListener(port int, enable bool) (Response, error) {
 	return a.Conn.CallMethod("EnableListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
+}
+
+// Session Operation
+func (a *API) ListSession(hub string) (Response, error) {
+	return a.Conn.CallMethod("EnumSession", Request{"HubName": {hub}})
+}
+func (a *API) GetSession(hub, name string) (Response, error) {
+	return a.Conn.CallMethod("GetSessionStats", Request{"HubName": {hub}, "Name": {name}})
+}
+func (a *API) DeleteSession(hub, name string) (Response, error) {
+	return a.Conn.CallMethod("DeleteSession", Request{"HubName": {hub}, "Name": {name}})
+}
+
+// Connection Operation
+func (a *API) ListConnection(hubname string) (Response, error) {
+	panic("还未实现")
+}
+func (a *API) GetConnection(cid string) (Response, error) {
+	panic("还未实现")
+}
+func (a *API) DisconnectConnection(cid string) (Response, error) {
+	panic("还未实现")
 }
