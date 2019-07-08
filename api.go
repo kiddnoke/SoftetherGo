@@ -590,11 +590,11 @@ func (a *API) EnableListener(port int, enable bool) (Response, error) {
 }
 
 // Session Operation
-func (a *API) ListSession(hub string) (Response, error) {
+func (a *API) ListSessions(hub string) (Response, error) {
 	return a.Conn.CallMethod("EnumSession", Request{"HubName": {hub}})
 }
 func (a *API) GetSession(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("GetSessionStats", Request{"HubName": {hub}, "Name": {name}})
+	return a.Conn.CallMethod("GetSessionStatus", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) DeleteSession(hub, name string) (Response, error) {
 	return a.Conn.CallMethod("DeleteSession", Request{"HubName": {hub}, "Name": {name}})

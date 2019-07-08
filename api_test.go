@@ -289,3 +289,37 @@ func TestAPI_ListListener(t *testing.T) {
 		log.Printf("ListListener %v \n", out)
 	}
 }
+func TestAPI_ListSession(t *testing.T) {
+	if out, err := a.ListSessions("DEFAULT"); err != nil {
+		log.Printf("ListSessions Error: %s", err.Error())
+		t.FailNow()
+	} else {
+		log.Println(out)
+		names, ok := out["Username"].([]interface{})
+		if ok && len(names) > 1 {
+			for index, value := range names {
+				sessionname := out["Name"].([]interface{})[index].(string)
+				log.Println(sessionname, value)
+			}
+		} else {
+			log.Println(out["Username"].(string))
+		}
+
+	}
+}
+func TestAPI_GetSession(t *testing.T) {
+	if out, err := a.GetSession("DEFAULT", "ipsectest"); err != nil {
+		log.Printf("GetSession Error: %s", err.Error())
+		t.FailNow()
+	} else {
+		log.Println(out)
+	}
+}
+func TestAPI_DeleteSession(t *testing.T) {
+	if out, err := a.DeleteSession("zusheng", "zusheng"); err != nil {
+		log.Printf("DeleteSession Error: %s", err.Error())
+		t.FailNow()
+	} else {
+		log.Println(out)
+	}
+}
