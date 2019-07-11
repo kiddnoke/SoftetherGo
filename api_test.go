@@ -47,7 +47,7 @@ func TestAPI_ListUser(t *testing.T) {
 	}
 }
 func TestAPI_GetUser(t *testing.T) {
-	if out, err := a.GetUser("4", "1"); err != nil {
+	if out, err := a.GetUser("DEFAULT", "1"); err != nil {
 		log.Printf("GetUser Error: %v\n", err)
 		t.FailNow()
 	} else {

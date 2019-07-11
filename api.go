@@ -384,8 +384,8 @@ func (a *API) CreateUser(hub, useranme, realname, note, password string) (Respon
 	payload := Request{
 		"HubName":        {hub},
 		"Name":           {useranme},
-		"RealName":       {realname},
-		"Note":           {note},
+		"Realname":       {[]byte(realname)},
+		"Note":           {[]byte(note)},
 		"AuthType":       {AUTHTYPE_PASSWORD},
 		"HashedKey":      {hashKey},
 		"NtLmSecureHash": {ntHashKey},
@@ -405,10 +405,12 @@ func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) 
 
 	hashKey := hashPassword(useranme, password)
 	ntHashKey := genNtPasswordHash(password)
-	payload["AuthType"] = append(payload["AuthType"], 1)
+	payload["AuthType"] = payload["AuthType"][0:0]
+	payload["AuthType"] = append(payload["AuthType"], AUTHTYPE_PASSWORD)
+	payload["HashedKey"] = payload["HashedKey"][0:0]
 	payload["HashedKey"] = append(payload["HashedKey"], hashKey)
-	payload["NtLmSecureHash"] = append(payload["NtmSecureHas"], ntHashKey)
-
+	payload["NtLmSecureHash"] = payload["NtLmSecureHash"][0:0]
+	payload["NtLmSecureHash"] = append(payload["NtLmSecureHash"], ntHashKey)
 	return a.Conn.CallMethod("SetUser", payload)
 }
 func (a *API) SetUserUpdateTime(hub, name string, timestamp time.Time) (Response, error) {
@@ -421,7 +423,8 @@ func (a *API) SetUserUpdateTime(hub, name string, timestamp time.Time) (Response
 	for key, value := range preUserInfo {
 		payload[key] = append(payload[key], value)
 	}
-	payload["UpdateTime"] = append(payload["UpdateTime"], timestamp.UTC().Unix())
+	payload["UpdateTime"] = payload["UpdateTime"][0:0]
+	payload["UpdateTime"] = append(payload["UpdateTime"], timestamp.UTC().UnixNano()/1e6)
 	return a.Conn.CallMethod("SetUser", payload)
 }
 func (a *API) SetUserExpireTime(hub, name string, timestamp time.Time) (Response, error) {
@@ -434,7 +437,8 @@ func (a *API) SetUserExpireTime(hub, name string, timestamp time.Time) (Response
 	for key, value := range preUserInfo {
 		payload[key] = append(payload[key], value)
 	}
-	payload["ExpireTime"] = append(payload["ExpireTime"], timestamp.UTC().Unix())
+	payload["ExpireTime"] = payload["ExpireTime"][0:0]
+	payload["ExpireTime"] = append(payload["ExpireTime"], timestamp.UTC().UnixNano()/1e6)
 	return a.Conn.CallMethod("SetUser", payload)
 }
 func (a *API) DeleteUser(hub, name string) (Response, error) {
@@ -456,10 +460,13 @@ func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Respo
 	for key, value := range preUserInfo {
 		payload[key] = append(payload[key], value)
 	}
-
+	payload["UsePolicy"] = payload["UsePolicy"][0:0]
 	payload["UsePolicy"] = append(payload["UsePolicy"], 1)
+	payload["policy:Access"] = payload["policy:Access"][0:0]
 	payload["policy:Access"] = append(payload["policy:Access"], 1)
+	payload["policy:MaxUpload"] = payload["policy:MaxUpload"][0:0]
 	payload["policy:MaxUpload"] = append(payload["policy:MaxUpload"], MaxUpload)
+	payload["policy:MaxDownload"] = payload["policy:MaxDownload"][0:0]
 	payload["policy:MaxDownload"] = append(payload["policy:MaxDownload"], MaxDownload)
 	return a.Conn.CallMethod("SetUser", payload)
 }
