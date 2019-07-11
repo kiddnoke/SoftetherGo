@@ -10,7 +10,7 @@ import (
 var a *API
 
 func init() {
-	a = NewAPI("47.111.114.109", 443, "47.74.188.243:7001")
+	a = NewAPI("10.0.2.71", 443, "10.0.2.70:7001")
 	a.HandShake()
 }
 
@@ -39,7 +39,7 @@ func TestAPI_GetOpenVpnRemoteAccess(t *testing.T) {
 	}
 }
 func TestAPI_ListUser(t *testing.T) {
-	if out, err := a.ListUser("100022"); err != nil {
+	if out, err := a.ListUser("1"); err != nil {
 		log.Printf("ListUser Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -47,7 +47,7 @@ func TestAPI_ListUser(t *testing.T) {
 	}
 }
 func TestAPI_GetUser(t *testing.T) {
-	if out, err := a.GetUser("DEFAULT", "default"); err != nil {
+	if out, err := a.GetUser("4", "1"); err != nil {
 		log.Printf("GetUser Error: %v\n", err)
 		t.FailNow()
 	} else {
@@ -192,7 +192,7 @@ func TestAPI_GetHubAdminOptions(t *testing.T) {
 	}
 }
 func TestAPI_CreateUser(t *testing.T) {
-	if out, err := a.CreateUser("VPN", "zhangsen3", "VPN"); err != nil {
+	if out, err := a.CreateUser("VPN", "zhangsen3", "zhangsen", "zhangsen3", "VPN"); err != nil {
 		log.Printf("CreateUser Error: %v", err)
 		t.FailNow()
 	} else {
@@ -217,7 +217,7 @@ func TestAPI_Create(t *testing.T) {
 		log.Println("EnableSecureNat :", out)
 	}
 	//
-	if out, err := a.CreateUser("golang", "golang", "golang"); err != nil {
+	if out, err := a.CreateUser("VPN", "zhangsen3", "zhangsen", "zhangsen3", "VPN"); err != nil {
 		if e, ok := err.(*ApiError); ok && e.Code() != ERR_USER_ALREADY_EXISTS {
 			log.Printf("CreateUser Error: %v\n", err)
 			t.FailNow()

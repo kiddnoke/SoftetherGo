@@ -378,12 +378,14 @@ func (a *API) ListGroup(hub string) (Response, error) {
 }
 
 // User Operation
-func (a *API) CreateUser(hub, useranme, password string) (Response, error) {
+func (a *API) CreateUser(hub, useranme, realname, note, password string) (Response, error) {
 	hashKey := hashPassword(useranme, password)
 	ntHashKey := genNtPasswordHash(password)
 	payload := Request{
 		"HubName":        {hub},
 		"Name":           {useranme},
+		"RealName":       {realname},
+		"Note":           {note},
 		"AuthType":       {AUTHTYPE_PASSWORD},
 		"HashedKey":      {hashKey},
 		"NtLmSecureHash": {ntHashKey},
@@ -407,6 +409,32 @@ func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) 
 	payload["HashedKey"] = append(payload["HashedKey"], hashKey)
 	payload["NtLmSecureHash"] = append(payload["NtmSecureHas"], ntHashKey)
 
+	return a.Conn.CallMethod("SetUser", payload)
+}
+func (a *API) SetUserUpdateTime(hub, name string, timestamp time.Time) (Response, error) {
+	preUserInfo, err := a.GetUser(hub, name)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := Request{}
+	for key, value := range preUserInfo {
+		payload[key] = append(payload[key], value)
+	}
+	payload["UpdateTime"] = append(payload["UpdateTime"], timestamp.UTC().Unix())
+	return a.Conn.CallMethod("SetUser", payload)
+}
+func (a *API) SetUserExpireTime(hub, name string, timestamp time.Time) (Response, error) {
+	preUserInfo, err := a.GetUser(hub, name)
+	if err != nil {
+		return nil, err
+	}
+
+	payload := Request{}
+	for key, value := range preUserInfo {
+		payload[key] = append(payload[key], value)
+	}
+	payload["ExpireTime"] = append(payload["ExpireTime"], timestamp.UTC().Unix())
 	return a.Conn.CallMethod("SetUser", payload)
 }
 func (a *API) DeleteUser(hub, name string) (Response, error) {
