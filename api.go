@@ -33,14 +33,13 @@ type Connector interface {
 	Connect() error
 	Close() error
 	GetSock() net.Conn
-	Request(method, target string, body []byte, header http.Header) (Response, error)
-	CallMethod(method string, request Request) (res Response, err error)
+	Send([]byte) error
+	Recv(should int) ([]byte, error)
 }
 
 type APIConnect struct {
 	host, port string
 	Sock       net.Conn
-	oplock     sync.Mutex
 }
 
 func (c *APIConnect) Connect() error {
@@ -60,10 +59,68 @@ func (c *APIConnect) Close() error {
 func (c *APIConnect) GetSock() net.Conn {
 	return c.Sock
 }
+func (c *APIConnect) Send(buf []byte) error {
+	sum := len(buf)
+	index := 0
+	for {
 
-func (c *APIConnect) Request(method, target string, body []byte, headers http.Header) (res Response, err error) {
-	c.oplock.Lock()
-	defer c.oplock.Unlock()
+		n, err := c.Sock.Write(buf[index:])
+		if err != nil {
+			return err
+		}
+		index += n
+		if index == sum {
+			break
+		}
+	}
+	return nil
+}
+func (c *APIConnect) Recv(shoud int) (buf []byte, err error) {
+	recved_ := 0
+	var recv_buf []byte
+	for {
+		tmp := make([]byte, 1024*4)
+		n, err := c.Sock.Read(tmp)
+		if n > 0 {
+			recved_ += n
+			recv_buf = append(recv_buf, tmp[:n]...)
+		}
+		if err != nil {
+			if eo, ok := err.(*net.OpError); ok && eo.Timeout() || eo.Temporary() {
+				err = nil
+				goto HadRecvAllData
+			}
+		}
+		if recved_ == shoud {
+			goto HadRecvAllData
+		}
+	}
+HadRecvAllData:
+	return recv_buf, nil
+}
+
+type API struct {
+	Host            string
+	Port            int
+	Password        string
+	Conn            Connector
+	ConnectResponse map[string]interface{}
+	handshaked      bool
+	oplock          sync.Mutex
+}
+
+// API基础方法
+func NewAPI(host string, port int, password string) *API {
+	return &API{
+		Conn:     &APIConnect{host, strconv.Itoa(port), nil},
+		Host:     host,
+		Port:     port,
+		Password: password,
+	}
+}
+func (a *API) Request(method, target string, body []byte, headers http.Header) (res Response, err error) {
+	a.oplock.Lock()
+	defer a.oplock.Unlock()
 	if headers == nil {
 		headers = globalHttpHeaders
 	}
@@ -77,18 +134,15 @@ func (c *APIConnect) Request(method, target string, body []byte, headers http.He
 		header += str
 	}
 	header += "\r\n"
-	c.Sock.Write([]byte(header))
-	n, err := c.Sock.Write(body)
+	a.Conn.Send([]byte(header))
+	err = a.Conn.Send(body)
 	if err != nil {
 		return nil, err
-	}
-	if n != len(body) {
-		return
 	}
 
 	//
 	var buf_length int
-	r := bufio.NewReader(c.Sock)
+	r := bufio.NewReader(a.Conn.GetSock())
 	l, _, e := r.ReadLine()
 	if e != nil {
 		return nil, e
@@ -117,79 +171,37 @@ func (c *APIConnect) Request(method, target string, body []byte, headers http.He
 		}
 	}
 	res["header"] = response_header
-
-	var buf []byte
-	var sum int = 0
-	for {
-		tmpbuff := make([]byte, 4096)
-		n, e = r.Read(tmpbuff)
-		if e != nil {
-			return nil, e
-		}
-		sum += n
-		buf = append(buf, tmpbuff[:n]...)
-		if buf_length == sum {
-			break
-		}
-	}
+	buf, err := a.Conn.Recv(buf_length)
 	res["body"] = buf
 	return res, nil
 }
-
-func (c *APIConnect) CallMethod(method string, request Request) (res Response, err error) {
-	c.oplock.Lock()
-	defer c.oplock.Unlock()
+func (a *API) CallMethod(method string, request Request) (res Response, err error) {
+	a.oplock.Lock()
+	defer a.oplock.Unlock()
 
 	if request == nil {
 		request = make(Request)
 	}
 	request["function_name"] = append(request["function_name"], method)
 	payload_serialized := Protocol(nil).Serialize(request)
-	os_socket := c.GetSock()
 	proto_length := Protocol(nil)
 	proto_length.SetInt(len(payload_serialized))
-	if n, err := os_socket.Write(proto_length.PayLoad); err != nil {
-		return nil, errors.New(fmt.Sprintf("Write(proto_length.PayLoad:[%v]", err.Error()))
-	} else if n != len(proto_length.PayLoad) {
-		log.Panicf("len(proto_length.PayLoad)[%d] != writelenth[%d]", len(proto_length.PayLoad), n)
-		return nil, errors.New(fmt.Sprintf("len(proto_length.PayLoad)[%d] != writelenth[%d]", len(proto_length.PayLoad), n))
+	if errsend := a.Conn.Send(proto_length.PayLoad); errsend != nil {
+		return nil, errsend
 	}
-	if n, err := os_socket.Write(payload_serialized); err != nil {
-		log.Panicf("Write(payload_serialized):[%v]", err.Error())
-		return nil, errors.New(fmt.Sprintf("Write(payload_serialized):[%v]", err.Error()))
-	} else if n != len(payload_serialized) {
-		log.Panicf("len(payload_serialized)[%d] != writelenth[%d]", len(payload_serialized), n)
-		return nil, errors.New(fmt.Sprintf("len(payload_serialized)[%d] != writelenth[%d]", len(payload_serialized), n))
+	if errsend := a.Conn.Send(payload_serialized); errsend != nil {
+		return nil, errsend
 	}
 
-	data_lenth_buf := make([]byte, 4)
-	if n, err := os_socket.Read(data_lenth_buf); err != nil {
-		log.Panicf("Read(data_lenth_buf):[%v]", err.Error())
-		return nil, errors.New(fmt.Sprintf("Read(data_lenth_buf):[%v]", err.Error()))
-	} else if n != 4 {
-		log.Panicf("api_call_wrong_data_lenth")
-		return nil, errors.New("api_call_wrong_data_length")
+	data_lenth_buf, errrecv := a.Conn.Recv(4)
+	if errrecv != nil {
+		return nil, errrecv
 	}
 	data_lenth_as_int := Protocol(data_lenth_buf).GetInt()
-	var response_buffer []byte
-	recv_sum := 0
-	for {
-		tmp_buf := make([]byte, 1024*4)
-		n, err := os_socket.Read(tmp_buf)
-		if n > 0 {
-			recv_sum += n
-			response_buffer = append(response_buffer, tmp_buf[:n]...)
-		}
-		if err != nil {
-			if eo, ok := err.(*net.OpError); ok && eo.Timeout() || eo.Temporary() {
-				goto HadRecvAllData
-			}
-		}
-		if recv_sum == data_lenth_as_int {
-			goto HadRecvAllData
-		}
+	response_buffer, err := a.Conn.Recv(data_lenth_as_int)
+	if err != nil {
+		return nil, err
 	}
-HadRecvAllData:
 	output, err := Protocol(response_buffer).Deserialize()
 	if err != nil {
 		return output, err
@@ -201,30 +213,12 @@ HadRecvAllData:
 	}
 	return output, nil
 }
-
-type API struct {
-	Host            string
-	Port            int
-	Password        string
-	Conn            Connector
-	ConnectResponse map[string]interface{}
-}
-
-// API基础方法
-func NewAPI(host string, port int, password string) *API {
-	return &API{
-		Conn:     &APIConnect{host, strconv.Itoa(port), nil, sync.Mutex{}},
-		Host:     host,
-		Port:     port,
-		Password: password,
-	}
-}
 func (a *API) Connect() (err error) {
 	err = a.Conn.Connect()
 	if err != nil {
 		return err
 	}
-	res, err := a.Conn.Request("POST", "/vpnsvc/connect.cgi", []byte("VPNCONNECT"), nil)
+	res, err := a.Request("POST", "/vpnsvc/connect.cgi", []byte("VPNCONNECT"), nil)
 	if err != nil {
 		return err
 	}
@@ -261,7 +255,7 @@ func (a *API) Authenticate(hub string) (err error) {
 	proto := Protocol(nil)
 	requst := proto.Serialize(auth_payload)
 
-	authenticate_response, err := a.Conn.Request("POST", "/vpnsvc/vpn.cgi", requst, nil)
+	authenticate_response, err := a.Request("POST", "/vpnsvc/vpn.cgi", requst, nil)
 	if err != nil {
 		return err
 	}
@@ -304,7 +298,7 @@ func (a *API) Test() {
 }
 
 func (a *API) GetCrl(name string, key int) (Response, error) {
-	return a.Conn.CallMethod("GetCrl", Request{"HubName": {name}, "Key": {key}})
+	return a.CallMethod("GetCrl", Request{"HubName": {name}, "Key": {key}})
 }
 
 // Server Operation
@@ -312,13 +306,13 @@ func (a *API) SetServerPassword(password string) (Response, error) {
 	password_hasher := NewSha0Hash()
 	password_hasher.Write([]byte(password))
 	hashed_password := password_hasher.Sum()
-	return a.Conn.CallMethod("SetServerPassword", Request{"HashedPassword": {hashed_password}})
+	return a.CallMethod("SetServerPassword", Request{"HashedPassword": {hashed_password}})
 }
 func (a *API) GetServerInfo() (Response, error) {
-	return a.Conn.CallMethod("GetServerInfo", nil)
+	return a.CallMethod("GetServerInfo", nil)
 }
 func (a *API) GetConfig() (Response, error) {
-	return a.Conn.CallMethod("GetConfig", Request{})
+	return a.CallMethod("GetConfig", Request{})
 }
 
 // Hub Operation
@@ -339,19 +333,19 @@ func (a *API) CreateHub(name string, online bool, hub_type int) (Response, error
 		}(online)},
 		"HubType": {hub_type},
 	}
-	return a.Conn.CallMethod("CreateHub", req)
+	return a.CallMethod("CreateHub", req)
 }
 func (a *API) ListHub() (Response, error) {
-	return a.Conn.CallMethod("EnumHub", nil)
+	return a.CallMethod("EnumHub", nil)
 }
 func (a *API) DeleteHub(name string) (Response, error) {
-	return a.Conn.CallMethod("DeleteHub", Request{"HubName": {name}})
+	return a.CallMethod("DeleteHub", Request{"HubName": {name}})
 }
 func (a *API) GetHub(name string) (Response, error) {
-	return a.Conn.CallMethod("GetHub", Request{"HubName": {name}})
+	return a.CallMethod("GetHub", Request{"HubName": {name}})
 }
 func (a *API) SetHub(name string, online bool, hub_type int) (Response, error) {
-	return a.Conn.CallMethod("SetHub", Request{
+	return a.CallMethod("SetHub", Request{
 		"HubName": {name},
 		"Online": {func(b bool) int {
 			if b {
@@ -364,18 +358,18 @@ func (a *API) SetHub(name string, online bool, hub_type int) (Response, error) {
 	})
 }
 func (a *API) GetHubStatus(name string) (Response, error) {
-	return a.Conn.CallMethod("GetHubStatus", Request{"HubName": {name}})
+	return a.CallMethod("GetHubStatus", Request{"HubName": {name}})
 }
 func (a *API) SetHubOnline(name string) (Response, error) {
-	return a.Conn.CallMethod("SetHubOnline", Request{"HubName": {name}})
+	return a.CallMethod("SetHubOnline", Request{"HubName": {name}})
 }
 func (a *API) GetHubAdminOptions(name string) (Response, error) {
-	return a.Conn.CallMethod("GetHubAdminOptions", Request{"HubName": {name}})
+	return a.CallMethod("GetHubAdminOptions", Request{"HubName": {name}})
 }
 
 // Group Operation
 func (a *API) CreateGroup(hub, name, realname, note string) (Response, error) {
-	return a.Conn.CallMethod("CreateGroup", Request{
+	return a.CallMethod("CreateGroup", Request{
 		"HubName":  {hub},
 		"Name":     {name},
 		"RealName": {realname},
@@ -383,19 +377,19 @@ func (a *API) CreateGroup(hub, name, realname, note string) (Response, error) {
 	})
 }
 func (a *API) SetGroup(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("SetGroup", Request{
+	return a.CallMethod("SetGroup", Request{
 		"HubName": {hub},
 		"Name":    {name},
 	})
 }
 func (a *API) GetGroup(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("GetGroup", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("GetGroup", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) DeleteGroup(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("DeleteGroup", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("DeleteGroup", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) ListGroup(hub string) (Response, error) {
-	return a.Conn.CallMethod("EnumGroup", Request{"HubName": {hub}})
+	return a.CallMethod("EnumGroup", Request{"HubName": {hub}})
 }
 
 // User Operation
@@ -411,7 +405,7 @@ func (a *API) CreateUser(hub, useranme, realname, note, password string) (Respon
 		"HashedKey":      {hashKey},
 		"NtLmSecureHash": {ntHashKey},
 	}
-	return a.Conn.CallMethod("CreateUser", payload)
+	return a.CallMethod("CreateUser", payload)
 }
 func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) {
 	preUserInfo, err := a.GetUser(hub, useranme)
@@ -432,7 +426,7 @@ func (a *API) SetUserPassword(hub, useranme, password string) (Response, error) 
 	payload["HashedKey"] = append(payload["HashedKey"], hashKey)
 	payload["NtLmSecureHash"] = payload["NtLmSecureHash"][0:0]
 	payload["NtLmSecureHash"] = append(payload["NtLmSecureHash"], ntHashKey)
-	return a.Conn.CallMethod("SetUser", payload)
+	return a.CallMethod("SetUser", payload)
 }
 func (a *API) SetUserUpdateTime(hub, name string, timestamp time.Time) (Response, error) {
 	preUserInfo, err := a.GetUser(hub, name)
@@ -446,7 +440,7 @@ func (a *API) SetUserUpdateTime(hub, name string, timestamp time.Time) (Response
 	}
 	payload["UpdateTime"] = payload["UpdateTime"][0:0]
 	payload["UpdateTime"] = append(payload["UpdateTime"], timestamp.UTC().UnixNano()/1e6)
-	return a.Conn.CallMethod("SetUser", payload)
+	return a.CallMethod("SetUser", payload)
 }
 func (a *API) SetUserExpireTime(hub, name string, timestamp time.Time) (Response, error) {
 	preUserInfo, err := a.GetUser(hub, name)
@@ -460,16 +454,16 @@ func (a *API) SetUserExpireTime(hub, name string, timestamp time.Time) (Response
 	}
 	payload["ExpireTime"] = payload["ExpireTime"][0:0]
 	payload["ExpireTime"] = append(payload["ExpireTime"], timestamp.UTC().UnixNano()/1e6)
-	return a.Conn.CallMethod("SetUser", payload)
+	return a.CallMethod("SetUser", payload)
 }
 func (a *API) DeleteUser(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("DeleteUser", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("DeleteUser", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) GetUser(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("GetUser", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("GetUser", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) ListUser(hub string) (Response, error) {
-	return a.Conn.CallMethod("EnumUser", Request{"HubName": {hub}})
+	return a.CallMethod("EnumUser", Request{"HubName": {hub}})
 }
 func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Response, error) {
 	preUserInfo, err := a.GetUser(hub, name)
@@ -489,21 +483,21 @@ func (a *API) SetUserPolicy(hub, name string, MaxUpload, MaxDownload int) (Respo
 	payload["policy:MaxUpload"] = append(payload["policy:MaxUpload"], MaxUpload)
 	payload["policy:MaxDownload"] = payload["policy:MaxDownload"][0:0]
 	payload["policy:MaxDownload"] = append(payload["policy:MaxDownload"], MaxDownload)
-	return a.Conn.CallMethod("SetUser", payload)
+	return a.CallMethod("SetUser", payload)
 }
 
 // SecureNat Operation
 func (a *API) EnableSecureNat(name string) (Response, error) {
-	return a.Conn.CallMethod("EnableSecureNAT", Request{"HubName": {name}})
+	return a.CallMethod("EnableSecureNAT", Request{"HubName": {name}})
 }
 func (a *API) DisableSecureNat(name string) (Response, error) {
-	return a.Conn.CallMethod("DisableSecureNAT", Request{"HubName": {name}})
+	return a.CallMethod("DisableSecureNAT", Request{"HubName": {name}})
 }
 func (a *API) GetSecureNatStatus(name string) (Response, error) {
-	return a.Conn.CallMethod("GetSecureNATStatus", Request{"HubName": {name}})
+	return a.CallMethod("GetSecureNATStatus", Request{"HubName": {name}})
 }
 func (a *API) GetSecureNatOption(hubname string) (Response, error) {
-	return a.Conn.CallMethod("GetSecureNATOption", Request{"RpcHubName": {hubname}})
+	return a.CallMethod("GetSecureNATOption", Request{"RpcHubName": {hubname}})
 }
 func (a *API) SetSecureNatOption(hubname string, natoptions map[string]interface{}) (Response, error) {
 	/*
@@ -513,7 +507,7 @@ func (a *API) SetSecureNatOption(hubname string, natoptions map[string]interface
 		DhcpGatewayAddress dhcp默认网关地址
 		DhcpDnsServerAddress dhcp的dns服务器地址
 	*/
-	return a.Conn.CallMethod("SetSecureNATOption", Request{})
+	return a.CallMethod("SetSecureNATOption", Request{})
 }
 
 // OpenVPN Operation
@@ -524,16 +518,16 @@ func (a *API) SetOpenVpnSSTPConfig(enable_open_vpn, enable_sstp bool, open_vpn_p
 		"EnableSSTP":      {booltoint8(enable_sstp)},
 		"OpenVPNPortList": intToString(open_vpn_port_list),
 	}
-	return a.Conn.CallMethod("SetOpenVpnSstpConfig", req)
+	return a.CallMethod("SetOpenVpnSstpConfig", req)
 }
 func (a *API) GetOpenVpnSSTPConfig() (Response, error) {
-	return a.Conn.CallMethod("GetOpenVpnSstpConfig", nil)
+	return a.CallMethod("GetOpenVpnSstpConfig", nil)
 }
 func (a *API) MakeOpenVpnConfigFile() (Response, error) {
-	return a.Conn.CallMethod("MakeOpenVpnConfigFile", nil)
+	return a.CallMethod("MakeOpenVpnConfigFile", nil)
 }
 func (a *API) GetOpenVpnRemoteAccess() (string, error) {
-	res, err := a.Conn.CallMethod("MakeOpenVpnConfigFile", nil)
+	res, err := a.CallMethod("MakeOpenVpnConfigFile", nil)
 	if err != nil {
 		return "", err
 	}
@@ -567,13 +561,13 @@ func (a *API) GetOpenVpnRemoteAccess() (string, error) {
 
 // IPSec Operation
 func (a *API) IPsecEnable() (Response, error) {
-	return a.Conn.CallMethod("IPSecEnable", Request{})
+	return a.CallMethod("IPSecEnable", Request{})
 }
 func (a *API) IPsecGet() (Response, error) {
-	return a.Conn.CallMethod("GetIPsecServices", Request{})
+	return a.CallMethod("GetIPsecServices", Request{})
 }
 func (a *API) IPsecSet(l2tp, l2tpraw, ehterip bool, psk string, hub string) (Response, error) {
-	return a.Conn.CallMethod("SetIPsecServices", Request{
+	return a.CallMethod("SetIPsecServices", Request{
 		"L2TP_IPsec":      {booltoint8(l2tp)},
 		"L2TP_Raw":        {booltoint8(l2tpraw)},
 		"EtherIP_IPsec":   {booltoint8(ehterip)},
@@ -584,10 +578,10 @@ func (a *API) IPsecSet(l2tp, l2tpraw, ehterip bool, psk string, hub string) (Res
 
 // Cert Operation
 func (a *API) GetServerCipher() (Response, error) {
-	return a.Conn.CallMethod("GetServerCipher", Request{"String": {""}})
+	return a.CallMethod("GetServerCipher", Request{"String": {""}})
 }
 func (a *API) GetServerCert() (string, error) {
-	if out, err := a.Conn.CallMethod("GetServerCert", nil); err != nil {
+	if out, err := a.CallMethod("GetServerCert", nil); err != nil {
 		return "", err
 	} else {
 		var convert = func(input interface{}) []byte {
@@ -606,15 +600,15 @@ func (a *API) GetServerCert() (string, error) {
 
 // DHCP Operation
 func (a *API) ListDhcp(hubname string) (Response, error) {
-	return a.Conn.CallMethod("EnumDHCP", Request{"HubName": {hubname}})
+	return a.CallMethod("EnumDHCP", Request{"HubName": {hubname}})
 }
 
 // DynamicDnsOperation
 func (a *API) GetDDnsInternetSetting() (Response, error) {
-	return a.Conn.CallMethod("GetDDnsInternetSetting", Request{})
+	return a.CallMethod("GetDDnsInternetSetting", Request{})
 }
 func (a *API) GetDDnsClientStatus() (Response, error) {
-	return a.Conn.CallMethod("GetDDnsClientStatus", Request{})
+	return a.CallMethod("GetDDnsClientStatus", Request{})
 }
 func (a *API) GetDDnsHostName() (string, string, error) {
 	out, err := a.GetDDnsClientStatus()
@@ -628,32 +622,32 @@ func (a *API) GetDDnsHostName() (string, string, error) {
 
 // Listener Operation
 func (a *API) CreateListener(port int, enable bool) (Response, error) {
-	return a.Conn.CallMethod("CreateListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
+	return a.CallMethod("CreateListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
 }
 func (a *API) ListListener() (map[int]bool, error) {
 	Ports := make(map[int]bool, 0)
-	_, err := a.Conn.CallMethod("EnumListener", Request{})
+	_, err := a.CallMethod("EnumListener", Request{})
 	if err != nil {
 		return nil, err
 	}
 	return Ports, err
 }
 func (a *API) DeleteListener(port int) (Response, error) {
-	return a.Conn.CallMethod("DeleteListener", Request{"Port": {port}})
+	return a.CallMethod("DeleteListener", Request{"Port": {port}})
 }
 func (a *API) EnableListener(port int, enable bool) (Response, error) {
-	return a.Conn.CallMethod("EnableListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
+	return a.CallMethod("EnableListener", Request{"Port": {port}, "Enable": {booltoint8(enable)}})
 }
 
 // Session Operation
 func (a *API) ListSessions(hub string) (Response, error) {
-	return a.Conn.CallMethod("EnumSession", Request{"HubName": {hub}})
+	return a.CallMethod("EnumSession", Request{"HubName": {hub}})
 }
 func (a *API) GetSession(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("GetSessionStatus", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("GetSessionStatus", Request{"HubName": {hub}, "Name": {name}})
 }
 func (a *API) DeleteSession(hub, name string) (Response, error) {
-	return a.Conn.CallMethod("DeleteSession", Request{"HubName": {hub}, "Name": {name}})
+	return a.CallMethod("DeleteSession", Request{"HubName": {hub}, "Name": {name}})
 }
 
 // Connection Operation
