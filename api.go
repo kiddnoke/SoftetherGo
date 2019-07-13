@@ -151,18 +151,23 @@ func (c *APIConnect) CallMethod(method string, request Request) (res Response, e
 	if n, err := os_socket.Write(proto_length.PayLoad); err != nil {
 		return nil, errors.New(fmt.Sprintf("Write(proto_length.PayLoad:[%v]", err.Error()))
 	} else if n != len(proto_length.PayLoad) {
+		log.Panicf("len(proto_length.PayLoad)[%d] != writelenth[%d]", len(proto_length.PayLoad), n)
 		return nil, errors.New(fmt.Sprintf("len(proto_length.PayLoad)[%d] != writelenth[%d]", len(proto_length.PayLoad), n))
 	}
 	if n, err := os_socket.Write(payload_serialized); err != nil {
+		log.Panicf("Write(payload_serialized):[%v]", err.Error())
 		return nil, errors.New(fmt.Sprintf("Write(payload_serialized):[%v]", err.Error()))
 	} else if n != len(payload_serialized) {
+		log.Panicf("len(payload_serialized)[%d] != writelenth[%d]", len(payload_serialized), n)
 		return nil, errors.New(fmt.Sprintf("len(payload_serialized)[%d] != writelenth[%d]", len(payload_serialized), n))
 	}
 
 	data_lenth_buf := make([]byte, 4)
 	if n, err := os_socket.Read(data_lenth_buf); err != nil {
+		log.Panicf("Read(data_lenth_buf):[%v]", err.Error())
 		return nil, errors.New(fmt.Sprintf("Read(data_lenth_buf):[%v]", err.Error()))
 	} else if n != 4 {
+		log.Panicf("api_call_wrong_data_lenth")
 		return nil, errors.New("api_call_wrong_data_length")
 	}
 	data_lenth_as_int := Protocol(data_lenth_buf).GetInt()
