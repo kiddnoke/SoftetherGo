@@ -152,7 +152,10 @@ func (c *APIConnect) CallMethod(method string, request Request) (res Response, e
 	os_socket.Write(payload_serialized)
 
 	data_lenth_buf := make([]byte, 4)
-	n, _ := os_socket.Read(data_lenth_buf)
+	n, err := os_socket.Read(data_lenth_buf)
+	if err != nil {
+		return nil, err
+	}
 	if n != 4 {
 		return nil, errors.New("api_call_wrong_data_length")
 	}
