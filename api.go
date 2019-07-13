@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,7 @@ type Connector interface {
 type APIConnect struct {
 	host, port string
 	Sock       net.Conn
+	oplock     sync.Mutex
 }
 
 func (c *APIConnect) Connect() error {
@@ -60,6 +62,8 @@ func (c *APIConnect) GetSock() net.Conn {
 }
 
 func (c *APIConnect) Request(method, target string, body []byte, headers http.Header) (res Response, err error) {
+	c.oplock.Lock()
+	defer c.oplock.Unlock()
 	if headers == nil {
 		headers = globalHttpHeaders
 	}
@@ -133,6 +137,9 @@ func (c *APIConnect) Request(method, target string, body []byte, headers http.He
 }
 
 func (c *APIConnect) CallMethod(method string, request Request) (res Response, err error) {
+	c.oplock.Lock()
+	defer c.oplock.Unlock()
+
 	if request == nil {
 		request = make(Request)
 	}
@@ -192,7 +199,7 @@ type API struct {
 // API基础方法
 func NewAPI(host string, port int, password string) *API {
 	return &API{
-		Conn:     &APIConnect{host, strconv.Itoa(port), nil},
+		Conn:     &APIConnect{host, strconv.Itoa(port), nil, sync.Mutex{}},
 		Host:     host,
 		Port:     port,
 		Password: password,
