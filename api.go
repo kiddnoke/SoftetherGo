@@ -76,21 +76,16 @@ func (c *APIConnect) Send(buf []byte) error {
 	return nil
 }
 func (c *APIConnect) Recv(shoud int) (buf []byte, err error) {
-	recved_ := 0
+	var recved_ int = 0
 	var recv_buf []byte
 	for {
-		tmp := make([]byte, 1024*4)
+		tmp := make([]byte, shoud-recved_)
 		n, err := c.Sock.Read(tmp)
-		if n > 0 {
-			recved_ += n
-			recv_buf = append(recv_buf, tmp[:n]...)
-		}
 		if err != nil {
-			if eo, ok := err.(*net.OpError); ok && eo.Timeout() || eo.Temporary() {
-				err = nil
-				goto HadRecvAllData
-			}
+			return nil, err
 		}
+		recved_ += n
+		recv_buf = append(recv_buf, tmp[:n]...)
 		if recved_ == shoud {
 			goto HadRecvAllData
 		}
@@ -171,7 +166,21 @@ func (a *API) Request(method, target string, body []byte, headers http.Header) (
 		}
 	}
 	res["header"] = response_header
-	buf, err := a.Conn.Recv(buf_length)
+
+	var buf []byte
+	var sum int = 0
+	for {
+		tmpbuff := make([]byte, 4096)
+		n, e := r.Read(tmpbuff)
+		if e != nil {
+			return nil, e
+		}
+		sum += n
+		buf = append(buf, tmpbuff[:n]...)
+		if buf_length == sum {
+			break
+		}
+	}
 	res["body"] = buf
 	return res, nil
 }
@@ -293,8 +302,8 @@ func (a *API) HandShake() error {
 	return nil
 }
 
-func (a *API) Test() {
-
+func (a *API) Test() (Response, error) {
+	return a.CallMethod("Test", Request{})
 }
 
 func (a *API) GetCrl(name string, key int) (Response, error) {

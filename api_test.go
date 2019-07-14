@@ -13,7 +13,14 @@ func init() {
 	a = NewAPI("10.0.2.71", 443, "10.0.2.70:7001")
 	a.HandShake()
 }
-
+func TestAPI_Test(t *testing.T) {
+	if out, err := a.Test(); err != nil {
+		log.Printf("Test Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("Test :%v\n", out)
+	}
+}
 func TestAPI_GetServerInfo(t *testing.T) {
 	if out, err := a.GetServerInfo(); err != nil {
 		log.Printf("GetServerInfo Error: %v\n", err)
