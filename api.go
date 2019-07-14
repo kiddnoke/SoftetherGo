@@ -201,14 +201,17 @@ func (a *API) CallMethod(method string, request Request) (res Response, err erro
 	if errsend := a.Conn.Send(payload_serialized); errsend != nil {
 		return nil, errsend
 	}
-
+	a.Conn.GetSock().SetReadDeadline(time.Now().Add(time.Second))
+	defer a.Conn.GetSock().SetReadDeadline(time.Time{})
 	data_lenth_buf, errrecv := a.Conn.Recv(4)
 	if errrecv != nil {
+		log.Panicln(errrecv)
 		return nil, errrecv
 	}
 	data_lenth_as_int := Protocol(data_lenth_buf).GetInt()
 	response_buffer, err := a.Conn.Recv(data_lenth_as_int)
 	if err != nil {
+		log.Panicln(err)
 		return nil, err
 	}
 	output, err := Protocol(response_buffer).Deserialize()
@@ -303,7 +306,12 @@ func (a *API) HandShake() error {
 }
 
 func (a *API) Test() (Response, error) {
-	return a.CallMethod("Test", Request{})
+	return a.CallMethod("Test", Request{
+		"Int64Value":  {int64(1)},
+		"IntValue":    {1},
+		"StrValue":    {"default"},
+		"UniStrValue": {"Uni_Default"},
+	})
 }
 
 func (a *API) GetCrl(name string, key int) (Response, error) {

@@ -20,6 +20,13 @@ func TestAPI_Test(t *testing.T) {
 	} else {
 		log.Printf("Test :%v\n", out)
 	}
+	time.Sleep(time.Second * 5)
+	if out, err := a.Test(); err != nil {
+		log.Printf("Test Error: %v\n", err)
+		t.FailNow()
+	} else {
+		log.Printf("Test :%v\n", out)
+	}
 }
 func TestAPI_GetServerInfo(t *testing.T) {
 	if out, err := a.GetServerInfo(); err != nil {
@@ -243,7 +250,7 @@ func TestAPI_Create(t *testing.T) {
 }
 func TestAPI_ListDhcp(t *testing.T) {
 	//
-	if out, err := a.ListDhcp("golang"); err != nil {
+	if out, err := a.ListDhcp("DEFAULT"); err != nil {
 		log.Printf("ListDhcp Error: %v\n", err)
 		t.FailNow()
 	} else {
