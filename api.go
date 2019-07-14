@@ -29,6 +29,8 @@ func keepalive(conn net.Conn) {
 	c.SetKeepAlivePeriod(15 * time.Second)
 }
 
+var DefaultCallMethodTimeout = time.Second * 20
+
 type Connector interface {
 	Connect() error
 	Close() error
@@ -201,7 +203,7 @@ func (a *API) CallMethod(method string, request Request) (res Response, err erro
 	if errsend := a.Conn.Send(payload_serialized); errsend != nil {
 		return nil, errsend
 	}
-	a.Conn.GetSock().SetReadDeadline(time.Now().Add(time.Second * 5))
+	a.Conn.GetSock().SetReadDeadline(time.Now().Add(DefaultCallMethodTimeout))
 	defer a.Conn.GetSock().SetReadDeadline(time.Time{})
 	data_lenth_buf, errrecv := a.Conn.Recv(4)
 	if errrecv != nil {
