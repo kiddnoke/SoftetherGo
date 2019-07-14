@@ -201,7 +201,7 @@ func (a *API) CallMethod(method string, request Request) (res Response, err erro
 	if errsend := a.Conn.Send(payload_serialized); errsend != nil {
 		return nil, errsend
 	}
-	a.Conn.GetSock().SetReadDeadline(time.Now().Add(time.Second))
+	a.Conn.GetSock().SetReadDeadline(time.Now().Add(time.Second * 5))
 	defer a.Conn.GetSock().SetReadDeadline(time.Time{})
 	data_lenth_buf, errrecv := a.Conn.Recv(4)
 	if errrecv != nil {
