@@ -207,13 +207,11 @@ func (a *API) CallMethod(method string, request Request) (res Response, err erro
 	defer a.Conn.GetSock().SetReadDeadline(time.Time{})
 	data_lenth_buf, errrecv := a.Conn.Recv(4)
 	if errrecv != nil {
-		log.Panicln(errrecv)
 		return nil, errrecv
 	}
 	data_lenth_as_int := Protocol(data_lenth_buf).GetInt()
 	response_buffer, err := a.Conn.Recv(data_lenth_as_int)
 	if err != nil {
-		log.Panicln(err)
 		return nil, err
 	}
 	output, err := Protocol(response_buffer).Deserialize()
